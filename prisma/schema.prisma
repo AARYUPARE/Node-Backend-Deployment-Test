@@ -1,0 +1,108 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id   Int    @id @default(autoincrement())
+  name     String
+  email    String @unique
+  phone    String
+  gender   String
+  password String
+
+  followerRelation Follow[] @relation("Follower")
+  followingRelation Follow[] @relation("Following")
+
+  contentRelation Content[] @relation("Owner")
+
+  likeRelation Like[] @relation("UserLiked")
+
+  conversationMemberRelation ConversationMember[] @relation("Member")
+
+  messageRelation Message[] @relation("MessageSender")
+}
+
+model Follow {
+  followerId Int
+  followingId Int
+
+  follower User @relation("Follower", fields:[followerId], references:[id], onDelete:Cascade)
+  following User @relation("Following", fields:[followingId], references:[id], onDelete:Cascade)
+
+  @@id([followerId, followingId])
+}
+
+enum ContentType {
+  POST
+  REEL
+  STORY
+}
+
+model Content {
+  id Int @id @default(autoincrement())
+  contentType ContentType
+  userId Int
+  likeCount Int @default(0)
+  commentCount Int @default(0)
+  shareCount Int @default(0)
+  contentUrl String
+
+  user User @relation("Owner", fields:[userId], references:[id])
+
+  likeRelation Like[] @relation("LikedContent")
+}
+
+model Like {
+  contentId Int 
+  userId Int
+
+  content Content @relation("LikedContent", fields:[contentId], references:[id])
+  user User @relation("UserLiked", fields:[userId], references:[id])
+
+  @@id([contentId, userId])
+}
+
+enum ConversationType {
+  PERSONAL
+  GROUP
+}
+
+enum ConversationRole {
+  MEMBER
+  ADMIN
+}
+
+model Conversation {
+  id Int @id @default(autoincrement())
+  type ConversationType
+  name String?
+
+  conversationMemberRelation ConversationMember[] @relation("Conversation")
+  messageRelation Message[] @relation("Conversation")
+}
+
+model ConversationMember {
+  conversationId Int 
+  userId Int 
+  role ConversationRole
+
+  conversation Conversation @relation("Conversation", fields:[conversationId], references:[id])
+  user User @relation("Member", fields:[userId], references:[id])
+
+  @@id([conversationId, userId])
+}
+
+model Message {
+  id Int @id @default(autoincrement())
+  conversationId Int
+  senderId Int
+  message String
+
+  conversation Conversation @relation("Conversation", fields:[conversationId], references:[id])
+  sender User @relation("MessageSender", fields:[senderId], references:[id]) 
+}
